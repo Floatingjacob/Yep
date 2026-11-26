@@ -3,7 +3,7 @@
     internal class Menu
     {
         internal Dictionary<int, Menu.Screen> Menues = new();
-        internal delegate bool Del();
+        internal delegate Task<bool> Del();
 
         public Screen CreateScreen(int Id, string Name)
         {
@@ -53,7 +53,7 @@
         public void Navigate(int menuId)
         {
             Screen menu = Menues[menuId];
-            int offset = menu.Name.Split('\n').Count() + 1;
+            int offset = menu.Name.Split('\n').Length + 1;
             menu.Display();
 
             int cursor = 0;
@@ -64,14 +64,14 @@
 
             while (true)
             {
-                ConsoleKeyInfo key = Console.ReadKey();
+                ConsoleKeyInfo key = Console.ReadKey(true);
 
                 switch (key.Key)
                 {
                     case ConsoleKey.UpArrow:
                         if (cursor > 0)
                         {
-
+                            Sound.Beep((600, 0.1));
                             Console.SetCursorPosition(0, cursor + offset);
                             Console.Write(' ');
                             cursor--;
@@ -79,11 +79,12 @@
                             Console.ForegroundColor = ConsoleColor.Yellow;
                             Console.Write('>');
                         }
-
+                        else Sound.Beep((200, 0.1), (0, 0.05), (200, 0.1));
                         break;
                     case ConsoleKey.DownArrow:
                         if (cursor < menu.Options.Count - 1)
                         {
+                            Sound.Beep((600, 0.1));
                             Console.SetCursorPosition(0, cursor + offset);
                             Console.Write(' ');
                             cursor++;
@@ -91,11 +92,13 @@
                             Console.ForegroundColor = ConsoleColor.Yellow;
                             Console.Write('>');
                         }
+                        else Sound.Beep((200, 0.1), (0, 0.05), (200, 0.1));
                         break;
                     case ConsoleKey.Enter:
+                        Sound.Beep((600, 0.1), (800, 0.1));
                         bool navAfter = true;
                         if (menu.Options[cursor].action != null)
-                            navAfter = menu.Options[cursor].action.Invoke();
+                            navAfter = menu.Options[cursor].action.Invoke().Result;
 
                         if (navAfter)
                         {

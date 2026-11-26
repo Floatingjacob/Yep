@@ -6,17 +6,22 @@
         int Tile = 0;
         Maze maze = null!;
 
-        internal void Move()
+        internal void Move(MultiplayerSession? multiplayerSession = null)
         {
-            int oldX = Position[0];
+            Tuple<char, int> char_;
 
             maze.Level[Position[0], Position[1]] = Tile;
-            
-            Console.SetCursorPosition(Position[0] * 2, Position[1]);
 
-            var char_ = Maze.getChar(maze.Level[Position[0], Position[1]]);
+            if (multiplayerSession != null)
+                multiplayerSession.UpdateTile(maze.Seed, Position[0], Position[1], Tile);
+            else
+            {
+                Console.SetCursorPosition(Position[0] * 2, Position[1]);
 
-            Console.Write(new string(char_.Item1, char_.Item2));
+                char_ = Maze.getChar(maze.Level[Position[0], Position[1]]);
+
+                Console.Write(new string(char_.Item1, char_.Item2));
+            }
 
             int direction = maze.Rand.Next(0, 4);
 
@@ -43,11 +48,17 @@
             Tile = maze.Level[Position[0], Position[1]]; // Store old tile
             maze.Level[Position[0], Position[1]] = 4;    // Set tile as enemy
 
-            Console.SetCursorPosition(Position[0] * 2, Position[1]);
+            if (multiplayerSession != null) 
+                multiplayerSession.UpdateTile(maze.Seed, Position[0], Position[1], 4);
+            else
+            {
+                Console.SetCursorPosition(Position[0] * 2, Position[1]);
 
-            char_ = Maze.getChar(4);
+                char_ = Maze.getChar(4);
 
                 Console.Write(char_.Item1);
+            }
+            
         }
 
         private static bool CanMoveTo(int type)

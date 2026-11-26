@@ -11,6 +11,7 @@
 
         internal Dictionary<int, Maze> mazes = new();
         internal Dictionary<string, string> PlayerNames = new();
+        internal Dictionary<string, int> PlayerScores = new();
         internal Dictionary<string, (int Seed, int[] Position, int[] OldPosition, char Mover)> PlayerInfo = new();
 
         internal void NewLevel(int seed, uint size)

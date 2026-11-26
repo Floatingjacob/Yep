@@ -256,11 +256,11 @@
             }
         }
 
-        internal void UpdateEnemies()
+        internal void UpdateEnemies(MultiplayerSession? multiplayerSession = null)
         {
             foreach (Enemy enemy in Enemies)
             {
-                enemy.Move();
+                enemy.Move(multiplayerSession);
             }
         }
 

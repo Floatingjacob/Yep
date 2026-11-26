@@ -6,7 +6,6 @@ namespace Yep
     using SoundFlow.Components;
     using SoundFlow.Providers;
     using SoundFlow.Structs;
-    using System.Runtime.CompilerServices;
 
     internal static class Sound
     {

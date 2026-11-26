@@ -3,7 +3,7 @@
 class Entry
 {
 
-    private static string header = @"
+    public static string header = @"
  /$$     /$$                 
 |  $$   /$$/                 
  \  $$ /$$//$$$$$$   /$$$$$$ 
@@ -16,88 +16,115 @@ class Entry
                    | $$      
                    |__/ 
 
-  Your Enigmatic Program
-    A game with mazes";
+";
     private static MultiplayerServer server = new();
 
     private static MultiplayerClient client = new("ws://localhost:9450");
     private static Menu menu = new();
-
-    static void Main(string[] args)
+    private static Maze maze = new();
+    public static bool playing = false;
+    static async Task Main(string[] args)
     {
+        Sound.Beep((0, 0.1)); // Ensure the sound lib loads when the program launches so there isn't a stutter
+        Console.Title = "Your Enigmatic Program - A game with mazes";
         Console.CursorVisible = false;
 
-        Menu.Screen main = menu.CreateScreen(0, header);
+        Menu.Screen main = menu.CreateScreen(0, header + " Your Enigmatic Program\n   A game with mazes");
         main.AddOptions(
             (() => "Singleplayer", 1, null),
             (() => "Multiplayer", 2, null),
-            (() => "Exit", -1, () => { Environment.Exit(0); return false; }));
+            (() => "Exit", -1, async () => { Environment.Exit(0); return false; }));
 
-        Menu.Screen singleplayer = menu.CreateScreen(1, "Singleplayer");
+        Menu.Screen singleplayer = menu.CreateScreen(1, header + " Singleplayer");
         singleplayer.AddOptions(
-            (() => "Start", 0, () => { Singleplayer(); return false; }),
+            (() => "Start", 0, async () => { Singleplayer(); return true; }),
             (() => "Back", 0, null));
 
-        Menu.Screen multiplayer = menu.CreateScreen(2, "Multiplayer");
+        Menu.Screen multiplayer = menu.CreateScreen(2, header + " Multiplayer");
         multiplayer.AddOptions(
             (() => "Host", 3, null),
             (() => "Join", 4, null),
             (() => "Back", 0, null));
 
-        Menu.Screen multiplayerHost = menu.CreateScreen(3, "Host Multiplayer");
+        Menu.Screen multiplayerHost = menu.CreateScreen(3, header + " Host Multiplayer");
         multiplayerHost.AddOptions(
-            (() => "Start hosting", 3, () => { server.Host(); return false; }),
-            (() => "Game settings", 3, () => { server.Configure(); return true; }),
-            (() => $"Set password (Currently set to \"{server.password}\")", 3, () => { server.SetPassword(); return true; }),
+            (() => "Start hosting", 3, async () => { server.Host(); return false; }),
+            (() => "Game settings", 3, async () => { server.Configure(); return true; }),
+            (() => $"Set password (Currently set to \"{server.password}\")", 3, async () => { server.SetPassword(); return true; }),
             (() => "Back", 2, null));
 
-        Menu.Screen multiplayerJoin = menu.CreateScreen(4, "Join Multiplayer");
+        Menu.Screen multiplayerJoin = menu.CreateScreen(4, header + " Join Multiplayer");
         multiplayerJoin.AddOptions(
-            (() => $"Change name (Currently set to \"{client.Name}\")", 4, () => { ChangeName(); return true; }),
-            (() => "Connect to a server", 4, () => { IpAndConnect(); return false; }),
+            (() => $"Change name (Currently set to \"{client.Name}\")", 4, async () => { ChangeName(); return true; }),
+            (() => "Connect to a server", 0, async () => { await IpAndConnect(); return true; }),
             (() => "Back", 2, null));
 
+        Menu.Screen paused = menu.CreateScreen(-1, header + " Paused");
+        paused.AddOptions(
+            (() => "Resume", 0, async () => { maze.Draw(); return false; }),
+            (() => "Exit to main menu", 0, async () => { playing = false; return false; }));
+
+
+        if (args.Length > 0)
+        {
+            if (args.Length != 2)
+            {
+                c.colorPrintln("**red**Invalid or malformed arguments.\nProper format is \"yuh <server ip> \"server password\"\"");
+                Console.ReadKey();
+                Environment.Exit(1);
+            }
+            else await IpAndConnect(args[0], args[1]);
+        }
         menu.Navigate(0);
     }
 
-    private static void IpAndConnect()
+    private static async Task IpAndConnect(string? ip = null, string? password = null)
     {
         string name = client.Name;
-        Console.Clear();
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("Enter the IP address of the server\n");
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.Write("> ");
-        Console.ForegroundColor = ConsoleColor.Red;
-        string ip = null!;
-        while (ip == null) ip = Console.ReadLine()!;
-        client = new($"ws://{ip}:9450");
-        client.Name = name;
-        client.Initialize();
+
+        if (ip != null)
+        {
+            client = new($"ws://{ip}:9450") { Name = name };
+            await client.Initialize(password);
+        }
+        else
+        {
+
+            Console.Clear();
+            c.colorPrint($"**cyan**{header} Enter the IP address of the server\n**yellow**> **red**", false);
+
+            while (string.IsNullOrWhiteSpace(ip)) ip = Console.ReadLine()!;
+
+            Console.ResetColor();
+
+            client = new($"ws://{ip}:9450") { Name = name };
+            await client.Initialize(password);
+        }
     }
 
     private static void ChangeName()
     {
         Console.Clear();
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("Choose a name\n");
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.Write("> ");
-        Console.ForegroundColor = ConsoleColor.Red;
+        c.colorPrint($"**cyan**{header} Choose a name\n**yellow**> **red**", false);
         string name = null!;
-        while (name == null) name = Console.ReadLine()!;
+
+        while (!MultiplayerServer.IsValidName(name)) name = Console.ReadLine()!;
+
+        Console.ResetColor();
+
         client.Name = name;
 
     }
     private static void Singleplayer()
     {
-        Maze maze = new();
+        playing = true;
+        maze = new();
         maze.Generate(5);
         maze.Draw();
 
-        while (true)
+        while (playing)
         {
-            ConsoleKeyInfo key = Console.ReadKey();
+            ConsoleKeyInfo key = Console.ReadKey(true);
             switch (key.Key)
             {
                 case ConsoleKey.LeftArrow:
@@ -116,6 +143,10 @@ class Entry
                     maze.Seed++;
                     maze.Generate(51);
                     maze.Draw();
+                    break;
+                case ConsoleKey.Escape:
+                    Sound.Beep((600, 0.1), (800, 0.1));
+                    menu.Navigate(-1);
                     break;
 
             }
