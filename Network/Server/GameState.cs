@@ -1,4 +1,6 @@
-﻿namespace Yep
+﻿using Yep.Core;
+
+namespace Yep.Network.Server
 {
     internal class GameState
     {
@@ -13,7 +15,7 @@
         public Dictionary<string, string> PlayerNames = new();
         public Dictionary<string, int> PlayerScores = new();
         public Dictionary<string, (int Seed, int[] Position, int[] OldPosition, char Mover)> PlayerInfo = new();
-        public List<MultiplayerSession> Clients = [];
+        public List<Session> Clients = [];
 
         internal void NewLevel(int seed, uint size)
         {

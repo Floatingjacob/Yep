@@ -1,4 +1,4 @@
-﻿namespace Yep
+﻿namespace Yep.Core
 {
     internal class Menu
     {

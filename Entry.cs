@@ -1,4 +1,6 @@
-﻿using Yep;
+﻿using Yep.Core;
+using Yep.Network.Client;
+using Yep.Network.Server;
 
 class Entry
 {
@@ -17,9 +19,9 @@ class Entry
                    |__/ 
 
 ";
-    private static MultiplayerServer server = new();
+    private static Server server = new();
 
-    private static MultiplayerClient client = new("ws://localhost:9450");
+    private static Client client = new("ws://localhost:9450");
     private static Menu menu = new();
     private static Maze maze = new();
     public static bool playing = false;
@@ -106,7 +108,7 @@ class Entry
         c.colorPrint($"**cyan**{header} Choose a name\n\n**yellow**> **red**", false);
         string name = null!;
 
-        while (!MultiplayerServer.IsValidName(name)) name = Console.ReadLine()!;
+        while (!Server.IsValidName(name)) name = Console.ReadLine()!;
 
         Console.ResetColor();
 

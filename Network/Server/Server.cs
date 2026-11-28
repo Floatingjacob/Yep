@@ -1,16 +1,18 @@
 ﻿using WebSocketSharp.Server;
+using Yep.Core;
 
-namespace Yep
+namespace Yep.Network.Server
 {
-    internal class MultiplayerServer
+    internal class Server
     {
         private GameState game = new();
         private Menu menu = new();
         internal string password = "";
         internal WebSocketServer wssv = null!;
-        private MultiplayerServerCommands msc = null!;
+        internal Monitor mon;
+        internal Commands commands = null!;
 
-        internal MultiplayerServer()
+        internal Server()
         {
             Menu.Screen main = menu.CreateScreen(0, Entry.header + " Configure Game");
             main.AddOptions(
@@ -21,52 +23,30 @@ namespace Yep
                 (() => $"Enemies (Currently {(game.enemiesEnabled ? "enabled" : "disabled")})", 0, async () => { game.enemiesEnabled = !game.enemiesEnabled; return true; }),
                 (() => "Back", 0, async () => { return false; }));
 
-            msc = new(this, game);
-            msc.RegisterAll();
+            mon = new(this);
+            commands = new(this, game);
+            commands.RegisterAll();
             
         }
         
-        internal void Host(int port = 9450)
+        internal async Task Host(int port = 9450)
         {
             wssv = new($"ws://0.0.0.0:{port}");
-            wssv.AddWebSocketService("/", () => new MultiplayerSession(game, this));
+            wssv.AddWebSocketService("/", () => new Session(game, this));
 
             game.mazes.Clear();
             game.NewLevel((int)game.startingSeed, game.startingLevelSize);
 
+            wssv.Log.Level = WebSocketSharp.LogLevel.Error;
+            wssv.Log.Output = (logData, filePath) =>
+            {
+                mon.Push($"**dgray**[Websocket {logData.Level} error] {logData.Message}**white**");
+            };
             wssv.Start();
 
             Console.Clear();
-            c.colorPrintln($"**green**Server started! Password is **dgreen**\"{password}\"\n**yellow**Type \"join\" to start playing.");
-            InputLoop();
-        }
-
-        private async void InputLoop()
-        {
-            Console.CursorVisible = true;
-            string? input;
-
-            while (wssv.IsListening)
-            {
-                c.colorPrint("**yellow**\n> **red**", false);
-
-                input = Console.ReadLine();
-
-                Console.ResetColor();
-
-                if (string.IsNullOrWhiteSpace(input))
-                {
-                    Console.WriteLine("\nType \"help\" for a list of commands.");
-                    continue;
-                }
-
-                if (await msc.TryRun(input) == false)
-                {
-                    c.colorPrint("\n**gray**Invalid command. Type \"help\" for a list of commands.");
-                }
-
-            }
-            Console.CursorVisible = false;
+            mon.Push($"**green**Server started! Password is **dgreen**\"{password}\"\n**yellow**Type \"join\" to start playing.**white**");
+            await mon.Open();
         }
         
         internal void SetPassword()

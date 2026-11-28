@@ -1,4 +1,6 @@
-﻿namespace Yep
+﻿using Yep.Network.Server;
+
+namespace Yep.Core
 {
     internal class Maze
     {
@@ -256,7 +258,7 @@
             }
         }
 
-        internal void UpdateEnemies(MultiplayerSession? multiplayerSession = null)
+        internal void UpdateEnemies(Session? multiplayerSession = null)
         {
             foreach (Enemy enemy in Enemies)
             {

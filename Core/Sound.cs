@@ -1,5 +1,4 @@
-﻿
-namespace Yep
+﻿namespace Yep.Core
 {
     using SoundFlow.Abstracts.Devices;
     using SoundFlow.Backends.MiniAudio;

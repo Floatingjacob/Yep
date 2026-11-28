@@ -1,4 +1,6 @@
-﻿namespace Yep
+﻿using Yep.Network.Server;
+
+namespace Yep.Core
 {
     internal class Enemy
     {
@@ -6,7 +8,7 @@
         int Tile = 0;
         Maze maze = null!;
 
-        internal void Move(MultiplayerSession? multiplayerSession = null)
+        internal void Move(Session? multiplayerSession = null)
         {
             Tuple<char, int> char_;
 

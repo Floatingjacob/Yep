@@ -1,9 +1,10 @@
 ﻿using System.Data;
 using WebSocketSharp;
+using Yep.Core;
 
-namespace Yep
+namespace Yep.Network.Client
 {
-    internal class MultiplayerClient(string url, params string[] protocols) : WebSocket(url, protocols)
+    internal class Client(string url, params string[] protocols) : WebSocket(url, protocols)
     {
         private int[,] Level = new int[,] { };
         private int[] Position = [0, 0];
@@ -15,13 +16,18 @@ namespace Yep
         internal string Name = "Anonymous";
         private string? Password;
         private bool PauseMenuOpen = false;
-        private MultiplayerClientMonitor Mon = null!;
-        Task inputLoop = null!;
+        private Monitor Mon = null!;
+        private Task inputLoop = null!;
+        internal Commands commands = null!;
         private TaskCompletionSource sessionEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         internal async Task Initialize(string? autoPassword = null)
         {
-            Mon = new(this);
+            Mon = new(client: this);
+            commands = new(this, Mon);
+
+            commands.RegisterAll();
+
             if (autoPassword != null)
                 Password = autoPassword;
 

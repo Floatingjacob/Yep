@@ -1,10 +1,11 @@
 ﻿using WebSocketSharp;
 using WebSocketSharp.Server;
+using Yep.Core;
 
-namespace Yep
+namespace Yep.Network.Server
 {
 
-    internal class MultiplayerSession(GameState game, MultiplayerServer server) : WebSocketBehavior
+    internal class Session(GameState game, Server server) : WebSocketBehavior
     {
         bool authenticated = false;
         protected override void OnOpen()
@@ -35,7 +36,7 @@ namespace Yep
 
             string message = $"Player \"{name ?? "Anonymous"}\" disconnected with reason \"{e.Reason}\"";
 
-            Console.WriteLine(message);
+            server.mon.Push(message);
             Sessions.Broadcast($"{NetworkCodes.Message}|{message}");
             try
             {
@@ -48,7 +49,6 @@ namespace Yep
                 game.PlayerScores.Remove(ID);
             }
             catch (KeyNotFoundException) { }; // shhh
-
         }
 
         protected override void OnMessage(MessageEventArgs e)
@@ -60,7 +60,7 @@ namespace Yep
             {
                 case NetworkCodes.Heartbeat:
                     Send($"{NetworkCodes.Heartbeat}");
-                    Console.WriteLine("Received a heartbeat from a client");
+                    server.mon.Push("Received a heartbeat from a client");
                     break;
                 case NetworkCodes.Password:
                     if (splitMessage[1] == server.password)
@@ -84,7 +84,7 @@ namespace Yep
 
                     string message = $"Player {game.PlayerNames[ID]} advanced to seed {nextLevel}";
 
-                    Console.WriteLine(message);
+                    server.mon.Push(message);
                     Sessions.Broadcast($"{NetworkCodes.Message}|{message}");
 
                     break;
@@ -136,6 +136,11 @@ namespace Yep
 
                     break;
                 case NetworkCodes.Message:
+                    if (!authenticated)
+                    {
+                        Send($"{NetworkCodes.Forbidden}|You cannot send messages right now.");
+                        break;
+                    }
                     Sessions.Broadcast($"{NetworkCodes.Message}|{game.PlayerNames[ID]}: {splitMessage[1]}");
                     break;
                 case NetworkCodes.Name:
@@ -150,7 +155,7 @@ namespace Yep
 
                     string message_ = $"Player {ID} renamed to {name}";
 
-                    Console.WriteLine(message_);
+                    server.mon.Push(message_);
                     Sessions.Broadcast($"{NetworkCodes.Message}|{message_}");
 
                     break;

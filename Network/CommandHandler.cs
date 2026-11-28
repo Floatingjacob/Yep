@@ -1,4 +1,4 @@
-﻿namespace Yep
+﻿namespace Yep.Network
 {
     public class CommandHandler
     {
@@ -10,11 +10,14 @@
             Func<List<string>, Task> Action
             );
 
+        private Monitor? Mon;
+
         internal Dictionary<string, Command> CommandRegistry = new(StringComparer.OrdinalIgnoreCase);
 
-        public CommandHandler()
+        internal CommandHandler(Monitor? mon = null)
         {
-            RegisterCommand("help", "Returns a list of commands with their usage and description.", async (args) => { c.colorPrintln(GetHelp()); });
+            Mon = mon;
+            RegisterCommand("help", "Returns a list of commands with their usage and description.", (args) => { if (mon != null) mon.Push(GetHelp()); else c.colorPrintln(GetHelp()); return Task.CompletedTask; });
         }
 
         public void RegisterCommand(string name, string description, Func<List<string>, Task> action, string[]? requiredArguments = null, string[]? optionalArguments = null)
@@ -60,13 +63,15 @@
 
             if (cmd.RequiredArguments.Length > processedCommand.Count)
             {
-                Console.WriteLine("\nMissing required arguments");
+                if (Mon != null) Mon.Push("\nMissing required arguments");
+                else Console.WriteLine("\nMissing required arguments");
                 return false;
             }
 
             if (processedCommand.Count > cmd.RequiredArguments.Length + cmd.OptionalArguments.Length)
             {
-                Console.WriteLine("\nToo many arguments");
+                if (Mon != null) Mon.Push("\nToo many arguments");
+                else Console.WriteLine("\nToo many arguments");
                 return false;
             }
 
@@ -134,7 +139,8 @@
 
             if (inString)
             {
-                Console.WriteLine("\nInvalid command, unterminated quote.");
+                if (Mon != null) Mon.Push("\nInvalid command, unterminated quote.");
+                else Console.WriteLine("\nInvalid command, unterminated quote.");
                 return null;
             }
 
