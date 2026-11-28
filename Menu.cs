@@ -50,7 +50,7 @@
             }
         }
 
-        public void Navigate(int menuId)
+        public async Task Navigate(int menuId)
         {
             Screen menu = Menues[menuId];
             int offset = menu.Name.Split('\n').Length + 1;
@@ -98,7 +98,7 @@
                         Sound.Beep((600, 0.1), (800, 0.1));
                         bool navAfter = true;
                         if (menu.Options[cursor].action != null)
-                            navAfter = menu.Options[cursor].action.Invoke().Result;
+                            navAfter = await menu.Options[cursor].action.Invoke();
 
                         if (navAfter)
                         {

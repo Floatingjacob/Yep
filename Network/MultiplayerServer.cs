@@ -1,6 +1,4 @@
-﻿using SoundFlow.Components;
-using System.Diagnostics;
-using WebSocketSharp.Server;
+﻿using WebSocketSharp.Server;
 
 namespace Yep
 {
@@ -8,8 +6,9 @@ namespace Yep
     {
         private GameState game = new();
         private Menu menu = new();
-        internal string? password = "";
+        internal string password = "";
         internal WebSocketServer wssv = null!;
+        private MultiplayerServerCommands msc = null!;
 
         internal MultiplayerServer()
         {
@@ -21,6 +20,10 @@ namespace Yep
                 (() => $"Change level size increment (Current is {game.levelSizeIncrement})", 0, async () => { Change("Change level size increment", ref game.levelSizeIncrement); game.levelSizeIncrement &= ~1u; return true; }),
                 (() => $"Enemies (Currently {(game.enemiesEnabled ? "enabled" : "disabled")})", 0, async () => { game.enemiesEnabled = !game.enemiesEnabled; return true; }),
                 (() => "Back", 0, async () => { return false; }));
+
+            msc = new(this, game);
+            msc.RegisterAll();
+            
         }
         
         internal void Host(int port = 9450)
@@ -38,11 +41,12 @@ namespace Yep
             InputLoop();
         }
 
-        private void InputLoop()
+        private async void InputLoop()
         {
             Console.CursorVisible = true;
             string? input;
-            while (true)
+
+            while (wssv.IsListening)
             {
                 c.colorPrint("**yellow**\n> **red**", false);
 
@@ -52,52 +56,26 @@ namespace Yep
 
                 if (string.IsNullOrWhiteSpace(input))
                 {
-                    Console.WriteLine("Type \"help\" for a list of commands.");
+                    Console.WriteLine("\nType \"help\" for a list of commands.");
                     continue;
                 }
 
-                string[] args = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                switch (args[0].ToUpper())
+                if (await msc.TryRun(input) == false)
                 {
-                    case "JOIN":
-                        if (!OperatingSystem.IsWindows())
-                            throw new NotImplementedException();
-
-                        string path = Path.GetFullPath(Environment.GetCommandLineArgs()[0]);
-
-#if DEBUG
-                        if (path.Contains(".dll")) // Only for development
-                            path = path.Replace(".dll", ".exe");
-#endif
-                        string? passwd = password;
-                        if (string.IsNullOrWhiteSpace(passwd))
-                            passwd = "!@EMPTY@!";
-
-                        Process p = new();
-                        ProcessStartInfo psi = new() { FileName = path, Arguments = $"localhost {passwd}", UseShellExecute = true };
-
-                        p.StartInfo = psi;
-                        p.Start();
-                        break;
-
-                    default:
-                        c.colorPrint("**gray**Type \"help\" for a list of commands.");
-                        break;
+                    c.colorPrint("\n**gray**Invalid command. Type \"help\" for a list of commands.");
                 }
 
-                // kick, change password, tp players, etc.
-
             }
+            Console.CursorVisible = false;
         }
-
+        
         internal void SetPassword()
         {
             Console.Clear();
 
             c.colorPrint($"**cyan**{Entry.header} Choose a password (empty for none)\n**yellow**> **red**", false);
 
-            password = Console.ReadLine();
+            password = Console.ReadLine() ?? "";
 
             Console.Clear();
         }
@@ -125,8 +103,8 @@ namespace Yep
 
         static internal bool IsValidName(string name)
         {
-            if (name.Length <= 0) return false;
             if (string.IsNullOrWhiteSpace(name)) return false;
+            if (name.Length <= 0) return false;
             if (name.Contains('|')) return false;
             if (name.Length >= 20) return false;
             return true;
@@ -135,7 +113,7 @@ namespace Yep
         internal void Configure()
         {
             //Console.Clear();
-            menu.Navigate(0);
+            menu.Navigate(0).Wait();
         }
 
     }

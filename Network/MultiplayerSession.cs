@@ -9,6 +9,7 @@ namespace Yep
         bool authenticated = false;
         protected override void OnOpen()
         {
+            game.Clients.Add(this);
             Send($"{NetworkCodes.ConnectionReceived}|{ID}");
 
             if (string.IsNullOrWhiteSpace(server.password))
@@ -29,22 +30,19 @@ namespace Yep
 
         protected override void OnClose(CloseEventArgs e)
         {
+            game.Clients.Remove(this);
             game.PlayerNames.TryGetValue(ID, out string? name);
 
             string message = $"Player \"{name ?? "Anonymous"}\" disconnected with reason \"{e.Reason}\"";
 
             Console.WriteLine(message);
             Sessions.Broadcast($"{NetworkCodes.Message}|{message}");
-
-            foreach (var player in game.PlayerInfo)
-            {
-                if (player.Value.Seed == game.PlayerInfo[ID].Seed && player.Key != ID)
-                {
-                    Sessions.SendTo($"{NetworkCodes.PeerDisconnect}|{game.PlayerInfo[ID].Position[0]},{game.PlayerInfo[ID].Position[1]}|{ID}", player.Key);
-                }
-            }
             try
             {
+                foreach (var player in game.PlayerInfo)
+                    if (player.Value.Seed == game.PlayerInfo[ID].Seed && player.Key != ID)
+                        Sessions.SendTo($"{NetworkCodes.PeerDisconnect}|{game.PlayerInfo[ID].Position[0]},{game.PlayerInfo[ID].Position[1]}|{ID}", player.Key);
+
                 game.PlayerInfo.Remove(ID);
                 game.PlayerNames.Remove(ID);
                 game.PlayerScores.Remove(ID);
@@ -76,22 +74,13 @@ namespace Yep
                         break;
                     }
                     int nextLevel = game.PlayerInfo[ID].Seed + 1;
+
                     Maze currentLevel = game.mazes[nextLevel - 1];
 
                     if (currentLevel.Level[game.PlayerInfo[ID].Position[0], game.PlayerInfo[ID].Position[1]] != 3)
                         break;
 
-                    if (!game.mazes.ContainsKey(nextLevel))
-                        game.NewLevel(nextLevel, currentLevel.Size + game.levelSizeIncrement);
-
-                    Send($"{NetworkCodes.Level}|{MultiplayerSerialization.ToString(game.mazes[nextLevel].Level)}|{string.Join(',', game.mazes[nextLevel].Player_.PlayerBlip)}");
-                    Send($"{NetworkCodes.Start}");
-
-                    int[] startingPos = [game.mazes[nextLevel].Player_.PlayerBlip[0], game.mazes[nextLevel].Player_.PlayerBlip[1]];
-
-                    game.PlayerInfo[ID] = (nextLevel, startingPos, startingPos, game.PlayerNames[ID][0]);
-
-                    SendPlayer();
+                    ChangeLevel(nextLevel);
 
                     string message = $"Player {game.PlayerNames[ID]} advanced to seed {nextLevel}";
 
@@ -197,6 +186,26 @@ namespace Yep
             }
         }
 
+        internal void ChangeLevel(int targetSeed, int? x = null, int? y = null)
+        {
+            
+            if (!game.mazes.ContainsKey(targetSeed))
+                game.NewLevel(targetSeed, game.startingLevelSize + (uint)Math.Abs(targetSeed - game.startingSeed) * game.levelSizeIncrement);
+
+            Send($"{NetworkCodes.Level}|{MultiplayerSerialization.ToString(game.mazes[targetSeed].Level)}|{string.Join(',', game.mazes[targetSeed].Player_.PlayerBlip)}");
+            Send($"{NetworkCodes.Start}");
+
+            int[] startingPos = [game.mazes[targetSeed].Player_.PlayerBlip[0], game.mazes[targetSeed].Player_.PlayerBlip[1]];
+
+            game.PlayerInfo[ID] = (targetSeed, [x ?? startingPos[0], y ?? startingPos[1]], [x ?? startingPos[0], y ?? startingPos[1]], game.PlayerNames[ID][0]);
+
+            SendPlayer();
+        }
+
+        internal void send(string data)
+        {
+            Send(data);
+        }
 
         private void SendPlayer()
         {
@@ -208,6 +217,11 @@ namespace Yep
                     Sessions.SendTo($"{NetworkCodes.PlayerPosition}|{game.PlayerInfo[ID].Position[0]},{game.PlayerInfo[ID].Position[1]}|{game.PlayerInfo[ID].OldPosition[0]},{game.PlayerInfo[ID].OldPosition[1]}|{ID}|{game.PlayerInfo[ID].Mover}", player.Key);
                 }
             }
+        }
+
+        internal void Disconnect(string reason)
+        {
+            Close(0u, reason);
         }
 
     }

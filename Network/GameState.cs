@@ -10,9 +10,10 @@
         internal bool enemiesEnabled = true;
 
         internal Dictionary<int, Maze> mazes = new();
-        internal Dictionary<string, string> PlayerNames = new();
-        internal Dictionary<string, int> PlayerScores = new();
-        internal Dictionary<string, (int Seed, int[] Position, int[] OldPosition, char Mover)> PlayerInfo = new();
+        public Dictionary<string, string> PlayerNames = new();
+        public Dictionary<string, int> PlayerScores = new();
+        public Dictionary<string, (int Seed, int[] Position, int[] OldPosition, char Mover)> PlayerInfo = new();
+        public List<MultiplayerSession> Clients = [];
 
         internal void NewLevel(int seed, uint size)
         {
